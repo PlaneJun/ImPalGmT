@@ -5,7 +5,6 @@
 
 MainWidget g_main_widget;
 
-
 void render_callback(float w, float h)
 {
 	g_main_widget.SetWindowSize(w, h);

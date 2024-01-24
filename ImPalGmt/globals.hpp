@@ -8,7 +8,16 @@ namespace globals
 	{
 		SLIDER = 0,
 		CHEKCBOX = 1,
-		COMBO = 2
+		COMBO = 2,
+		INPUTEXT = 3
+	};
+
+	enum EDataType :uint8_t
+	{
+		NUMBER = 0,
+		FLOAT = 1,
+		TEXT = 2,
+		BOOLEAN = 3
 	};
 
 	typedef struct _TUIOption

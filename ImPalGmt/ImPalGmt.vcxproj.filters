@@ -28,9 +28,6 @@
     <Filter Include="utils">
       <UniqueIdentifier>{81d6fefa-b1bc-4085-9f78-bd0c26dfa846}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tools">
-      <UniqueIdentifier>{abfdc85c-a14a-4c12-9e16-2625c14aca2b}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImPalGmt.cpp">
