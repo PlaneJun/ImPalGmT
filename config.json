@@ -1,0 +1,111 @@
+{
+	"Difficulty":{
+		"name":"难度",
+		"type":2,
+		"values":["休闲","普通","困难","自定义"]
+	},
+	"DayTimeSpeedRate":{
+		
+	},
+	"NightTimeSpeedRate":{
+		
+	},
+	"ExpRate":{
+		
+	},
+	"PalCaptureRate":{
+		
+	},
+	"PalSpawnNumRate":{
+		
+	},
+	"PalDamageRateAttack":{
+		
+	},
+	"PalDamageRateDefense":{
+		
+	},
+	"PlayerDamageRateAttack":{
+		
+	},
+	"PlayerDamageRateDefense":{
+		
+	},
+	"PlayerStomachDecreaceRate":{
+		
+	},
+	"PlayerStaminaDecreaceRate":{
+		
+	},
+	"PlayerAutoHPRegeneRate":{
+		
+	},
+	"PlayerAutoHpRegeneRateInSleep":{
+		
+	},
+	"PalStomachDecreaceRate":{
+		
+	},
+	"PalStaminaDecreaceRate":{
+		
+	},
+	"PalAutoHPRegeneRate":{
+		
+	},
+	"PalAutoHpRegeneRateInSleep":{
+		
+	},
+	"BuildObjectDamageRate":{
+		
+	},
+	"BuildObjectDeteriorationDamageRate":{
+		
+	},
+	"CollectionDropRate":{
+		
+	},
+	"CollectionObjectHpRate":{
+		
+	},
+	"CollectionObjectRespawnSpeedRate":{
+		
+	},
+	"EnemyDropItemRate":{
+		
+	},
+	"DeathPenalty":{
+		
+	},
+	"GuildPlayerMaxNum":{
+		
+	},
+	"PalEggDefaultHatchingTime":{
+		
+	},
+	"ServerPlayerMaxNum":{
+		
+	},
+	"ServerName":{
+		
+	},
+	"ServerDescription":{
+		
+	},
+	"AdminPassword":{
+		
+	},
+	"ServerPassword":{
+		
+	},
+	"PublicPort":{
+		
+	},
+	"PublicIP":{
+		
+	},
+	"RCONEnabled":{
+		
+	},
+	"RCONPort":{
+	}
+}
