@@ -1,6 +1,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <fstream>
 #include <sstream>
 #include "MainWidget.h"
 #include <time.h>
@@ -19,50 +20,16 @@ rcon g_rcon_cli;
 std::string g_console_logs{};
 
 
-void read_config(std::string config)
+void read_json(std::string path)
 {
-	std::map<std::string, std::string> keyValuePairs;
+	std::ifstream conf_file(path);
+	conf_file >> globals::setting::options;
+}
 
-	std::istringstream iss(config);
-	std::string line;
-	while (std::getline(iss, line))
-	{
-		std::istringstream lineStream(line);
-		std::string key, value;
-		std::getline(lineStream, key, '=');
-		std::getline(lineStream, value, '=');
-		keyValuePairs[key] = value;
-	}
-
-	globals::setting::switch_难度 = keyValuePairs["Difficulty"];
-	globals::setting::switch_白天流逝速度 = std::stof(keyValuePairs["DayTimeSpeedRate"]);
-	globals::setting::switch_夜晚流逝速度 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_经验值倍率 = std::stof(keyValuePairs["ExpRate"]);
-	globals::setting::switch_捕获概率倍率 = std::stof(keyValuePairs["PalCaptureRate"]);
-	globals::setting::switch_帕鲁出现数量倍率 = std::stof(keyValuePairs["PalSpawnNumRate"]);
-	globals::setting::switch_帕鲁攻击伤害倍率 = std::stof(keyValuePairs["PalDamageRateAttack"]);
-	globals::setting::switch_帕鲁承受伤害倍率 = std::stof(keyValuePairs["PalDamageRateDefense"]);
-	globals::setting::switch_帕鲁饱食度降低倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_帕鲁耐力降低倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_帕鲁生命值自然回复倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_帕鲁睡眠时生命值回复倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_玩家攻击伤害倍率 = std::stof(keyValuePairs["PlayerDamageRateAttack"]);
-	globals::setting::switch_玩家承受伤害倍率 = std::stof(keyValuePairs["PlayerDamageRateDefense"]);
-	globals::setting::switch_玩家饱食度降低倍率 = std::stof(keyValuePairs["PlayerStomachDecreaceRate"]);
-	globals::setting::switch_玩家耐力降低倍率 = std::stof(keyValuePairs["PlayerStaminaDecreaceRate"]);
-	globals::setting::switch_玩家睡眠事生命值回复倍率 = std::stof(keyValuePairs["PlayerAutoHpRegeneRateInSleep"]);
-	globals::setting::switch_对建筑伤害倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_建筑物的劣化速度倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_世界内的掉落物上限 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_道具采集量倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_可采集物品生命值倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_可采集物品刷新间隔 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_道具掉落量倍率 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_巨大蛋孵化所需时间 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_是否会发生袭击时间 = keyValuePairs["Difficulty"] == "True"? true:false;
-	globals::setting::switch_死亡惩罚 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_公会人数上线 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
-	globals::setting::switch_可分派至据点工作的帕鲁上线 = std::stof(keyValuePairs["NightTimeSpeedRate"]);
+void save_json(std::string path)
+{
+	std::ofstream conf_file(path);
+	conf_file << globals::setting::options.dump();
 }
 
 template <typename... Args>
@@ -192,39 +159,84 @@ void Table_Setting(ImVec2 winsize)
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
 	if (ImGui::BeginChild("#blocks_begin", ImVec2(ImGui::GetContentRegionAvail().x, 60), false, ImGuiWindowFlags_NoBackground))
 	{
-		// 绘制背景
-		auto ui = globals::setting::ui_ops .begin();
-		draw::get_instance()->DrawFillRect(ui->title, blockStart / 2, 0, ImGui::GetContentRegionAvail().x - blockStart, blockHight, IM_COL32(0, 0, 0, 30), IM_COL32(8, 171, 210, 100));
-		ImGui::SetCursorPosX(blockStart + winsize.x / 8.5);
-		auto cursorY = ImGui::GetCursorPosY();
-		ImGui::SetCursorPosY(cursorY - blockHight * 0.75);
-		draw::get_instance()->ComboEx(ui->title, static_cast<int*>(ui->value), ui->combo.str_list);
+		auto ui = globals::setting::options.begin();
+		std::string title = (*ui)["name"].get<std::string>();
+		draw::get_instance()->DrawFillRect(title.c_str(), blockStart / 2, 0, ImGui::GetContentRegionAvail().x - blockStart, blockHight, IM_COL32(0, 0, 0, 30), IM_COL32(8, 171, 210, 100));
+		float cursorY = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos({ float(blockStart + winsize.x / 8.5),float(cursorY - blockHight * 0.75) });
+		int value = (*ui)["value"].get<int>();
+
+		std::vector<std::string> datas{};
+		for (auto d : (*ui)["dict"])
+			datas.push_back(d.get<std::string>());
+
+		draw::get_instance()->ComboEx(title.c_str(), &value, datas);
+		(*ui)["value"] = value;
 		ImGui::SetCursorPosY(cursorY);
 		ImGui::EndChild();
 	}
 	ImGui::Separator();
 	if (ImGui::BeginChild("#blocks_option", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y * 0.9), false, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_HorizontalScrollbar))
 	{
-		for (auto ui = globals::setting::ui_ops.begin() + 1; ui != globals::setting::ui_ops.end(); ui++)
+		for (auto ui = globals::setting::options.begin() ; ui != globals::setting::options.end(); ui++)
 		{
-			// 绘制背景
-			draw::get_instance()->DrawFillRect(ui->title, blockStart, 0, ImGui::GetContentRegionAvail().x - blockStart * 2, blockHight, IM_COL32(0, 0, 0, 30), IM_COL32(8, 171, 210, 100));
+			// 跳过第一个,因为上边绘制过了
+			if(ui == globals::setting::options.begin())
+				continue;
+
+			std::string title = (*ui)["name"].get<std::string>();
+			globals::EDataType data_type = (*ui)["data_type"].get<globals::EDataType>();
+			globals::EUIType ui_type = (*ui)["ui_type"].get<globals::EUIType>();
+
+			draw::get_instance()->DrawFillRect(title.c_str(), blockStart, 0, ImGui::GetContentRegionAvail().x - blockStart * 2, blockHight, IM_COL32(0, 0, 0, 30), IM_COL32(8, 171, 210, 100));
 			ImGui::SetCursorPosX(blockStart + winsize.x / 8.5);
 			auto cursorY = ImGui::GetCursorPosY();
-			if (ui->type == 0)
+			if (ui_type == globals::EUIType::SLIDER)
 			{
+				float value{};
+				char format[20]{};
+				if (data_type == globals::EDataType::NUMBER)
+				{
+					strcpy_s(format, "%.f");
+					value = (*ui)["value"].get<int>();
+				}
+				else if (data_type == globals::EDataType::FLOAT)
+				{
+					strcpy_s(format, "%.1f");
+					value = (*ui)["value"].get<float>();
+				}
 				ImGui::SetCursorPosY(cursorY - blockHight * 0.85);
-				draw::get_instance()->SliderFloatEx(ui->title, static_cast<float*>(ui->value), ui->slider.min, ui->slider.max);
+				draw::get_instance()->SliderFloatEx(title.c_str(), &value, (*ui)["min"].get<float>(), (*ui)["max"].get<float>(), format);
+				(*ui)["value"] = value;
 			}
-			else if (ui->type == 1)
+			else if (ui_type == globals::EUIType::CHEKCBOX)
 			{
+				bool value = (*ui)["value"].get<bool>();
+
 				ImGui::SetCursorPosY(cursorY - blockHight * 0.7);
-				draw::get_instance()->CheckboxEx(ui->title, static_cast<bool*>(ui->value));
+				draw::get_instance()->CheckboxEx(title.c_str(), &value);
+				(*ui)["value"] = value;
 			}
-			else if (ui->type == 2)
+			else if (ui_type == globals::EUIType::COMBO)
 			{
+				int value = (*ui)["value"].get<int>();
+
+				std::vector<std::string> datas{};
+				for (auto d : (*ui)["dict"])
+					datas.push_back(d.get<std::string>());
+
 				ImGui::SetCursorPosY(cursorY - blockHight * 0.75);
-				draw::get_instance()->ComboEx(ui->title, static_cast<int*>(ui->value), ui->combo.str_list);
+				draw::get_instance()->ComboEx(title.c_str(), &value, datas);
+
+				(*ui)["value"] = value;
+			}
+			else if (ui_type == globals::EUIType::INPUTEXT)
+			{
+				char buffer[256]{};
+				strcpy_s(buffer, (*ui)["value"].get<std::string>().c_str());
+				ImGui::SetCursorPosY(cursorY - blockHight * 0.75);
+				draw::get_instance()->InputTextEx(title.c_str(), buffer, sizeof(buffer));
+				(*ui)["value"] = buffer;
 			}
 			ImGui::SetCursorPosY(cursorY);
 		}
@@ -234,7 +246,10 @@ void Table_Setting(ImVec2 winsize)
 	if (ImGui::BeginChild("#blocks_end", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, ImGuiWindowFlags_NoBackground))
 	{
 		ImGui::SetCursorPos({ winsize.x / 2 - 95,10 });
-		ImGui::Button(u8"\t\t\t\t\t确\t\t定\t\t\t\t\t");
+		if (ImGui::Button(u8"\t\t\t\t\t确\t\t定\t\t\t\t\t"))
+		{
+			save_json("./data/config.json");
+		}
 		ImGui::EndChild();
 	}
 
@@ -260,6 +275,7 @@ void MainWidget::OnPaint()
 		g_console_logs += format_console_log("init rcon server done!");
 		CloseHandle(CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)RecvData_ThreadProc, &g_rcon_cli, NULL, NULL));
 		CloseHandle(CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)TimeCall_ThreadProc, NULL, NULL, NULL));
+		read_json("./data/config.json");
 		s_init = true;
 	}
 

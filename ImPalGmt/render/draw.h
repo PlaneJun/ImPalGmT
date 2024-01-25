@@ -22,6 +22,9 @@ public:
 	bool ComboEx(const char* label, int* current_item, std::vector<std::string> items, int height_in_items = -1);
 	bool ComboEx(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items=-1);
 
+
+	bool InputTextEx(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags=0, ImGuiInputTextCallback callback=0, void* user_data=0);
+	bool InputTextExEx(const char* label, const char* hint, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = 0, void* callback_user_data = 0);
 private:
 	static draw* s_instance_;
 };

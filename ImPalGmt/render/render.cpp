@@ -160,12 +160,12 @@ bool render::CreatGui(const wchar_t* title, const wchar_t* classname, uint32_t w
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    std::string fontPath = "Font.ttf";
+    std::string fontPath = "./res/Font.ttf";
     std::ifstream inFile(fontPath);
     if (!inFile.is_open())
         fontPath = "c:\\Windows\\Fonts\\msyh.ttf";
     inFile.close();
-    io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 15.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+    io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd_);

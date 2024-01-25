@@ -13,5 +13,5 @@ void render_callback(float w, float h)
 
 int main()
 {
-	render::get_instasnce()->CreatGui(L"ImPalGmt", L"PalWorld Server Gm Tool", 800, 600, render_callback);
+	render::get_instasnce()->CreatGui(L"ImPalGmt", L"PalWorld Server Gm Tool", 1280, 800, render_callback);
 }
