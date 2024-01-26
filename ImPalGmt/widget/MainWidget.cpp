@@ -1,5 +1,6 @@
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -17,7 +18,9 @@
 #define WAIT_TIME_60_SEC 60
 
 rcon g_rcon_cli;
+HANDLE g_recv_tid;
 std::string g_console_logs{};
+
 
 
 void read_json(std::string path)
@@ -30,6 +33,66 @@ void save_json(std::string path)
 {
 	std::ofstream conf_file(path);
 	conf_file << globals::setting::options.dump();
+}
+
+bool save_json_to_conf(nlohmann::ordered_json datas)
+{
+	std::string conf_buffer = "[/Script/Pal.PalGameWorldSettings]\nOptionSettings=(";
+	for (auto data : datas.items())
+	{
+		conf_buffer += data.key();
+		conf_buffer += "=";
+		globals::EDataType dtype = data.value()["data_type"].get<globals::EDataType>();
+		auto obj_value = data.value()["value"];
+		switch (dtype)
+		{
+			case globals::EDataType::NUMBER:
+			{
+				conf_buffer += std::to_string(obj_value.get<int>());
+				break;
+			}
+			case globals::EDataType::FLOAT:
+			{
+				conf_buffer += std::to_string(obj_value.get<float>());
+				break;
+			}
+			case globals::EDataType::BOOLEAN:
+			{
+				conf_buffer += obj_value.get<bool>() ? "True":"False";
+				break;
+			}
+			case globals::EDataType::TEXT:
+			{
+				conf_buffer += "\""+obj_value.get<std::string>()+"\"";
+				break;
+			}
+			case globals::EDataType::LIST:
+			{
+				int index = obj_value.get<int>();
+				auto dict = data.value()["dict"].get<std::unordered_map<std::string,std::string>>();
+				auto it = dict.begin();
+				std::advance(it, index);
+				if(it != dict.end())
+					conf_buffer += it->first;
+				else
+					conf_buffer +="None";
+				break;
+			}
+		}
+		
+		conf_buffer += ",";
+	}
+	// 去除最后一个逗号
+	conf_buffer = conf_buffer.substr(0, conf_buffer.length() - 1);
+	conf_buffer += ")";
+
+	FILE* config = NULL;
+	fopen_s(&config, "PalWorldSettings.ini", "w+");
+	if (config == NULL)
+		return false;
+	fwrite(conf_buffer.c_str(),1, conf_buffer.length(),config);
+	fclose(config);
+	return true;
 }
 
 template <typename... Args>
@@ -102,13 +165,16 @@ void TimeCall_ThreadProc()
 
 void Table_Base()
 {
+	static bool connect = false;
 	if (ImGui::BeginChild("#server_console", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y * 0.7), false))
 	{
 		ImGui::TextUnformatted(g_console_logs.c_str());
 		ImGui::EndChild();
 	}
+
+	ImGui::BeginDisabled(!connect);
 	static char input_cmd[256]{};
-	ImGui::InputTextWithHint("##recon_command", "/Command", input_cmd, sizeof(input_cmd));
+	ImGui::InputTextWithHint("##rcon_command", "/Command", input_cmd, sizeof(input_cmd));
 	ImGui::SameLine();
 	if (ImGui::Button(u8"\t发\t送\t"))
 	{
@@ -136,6 +202,25 @@ void Table_Base()
 			CloseHandle(hFile);
 		}
 	}
+	ImGui::EndDisabled(); ImGui::SameLine();
+	static const char* btn_connect[] = { u8"\t连\t接\t" ,u8"\t断\t开\t" };
+	if (ImGui::Button(btn_connect[connect]))
+	{
+		if (!connect)
+		{
+			ImGui::OpenPopup("connect to remote rcon");
+			ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+			ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		}
+		else
+		{
+			// 清理
+			TerminateThread(g_recv_tid, 0);
+			g_rcon_cli.close();
+			connect = false;
+		}
+		
+	}
 	ImGui::Separator();
 	if (ImGui::BeginChild("#server_status", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, ImGuiWindowFlags_NoBackground))
 	{
@@ -143,6 +228,45 @@ void Table_Base()
 		ImGui::SameLine();
 		ImGui::Checkbox(u8"定时重启", &globals::base::switch_restart);
 		ImGui::EndChild();
+	}
+	if (ImGui::BeginPopupModal("connect to remote rcon", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text(u8"输入ip:port");
+		ImGui::Separator();
+		static char buf[100]{};
+		ImGui::InputText("##ip_rcon", buf, 100);
+		if (ImGui::Button(u8"确认", ImVec2(120, 0)))
+		{
+			std::string tmp(buf);
+			int index = tmp.find(":");
+			if (index != std::string::npos)
+			{
+				std::string ip = tmp.substr(0, index);
+				int port = atoi(tmp.substr(index+1).c_str());
+				g_rcon_cli.init_socket(ip.c_str(), port);
+				if (!g_rcon_cli.auth("PlaneJun_666"))
+				{
+					MessageBoxA(NULL, "rcon auth fail", NULL, NULL);
+				}
+				else
+				{
+					g_console_logs += format_console_log("init rcon server done!");
+					g_recv_tid = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)RecvData_ThreadProc, &g_rcon_cli, NULL, NULL);
+					connect = true;
+				}
+			}
+			else
+			{
+				MessageBoxA(NULL, "invaild input", NULL, NULL);
+			}
+			
+			
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SetItemDefaultFocus();
+		ImGui::SameLine();
+		if (ImGui::Button(u8"取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+		ImGui::EndPopup();
 	}
 
 	//修正数据
@@ -207,7 +331,15 @@ void Table_Setting(ImVec2 winsize)
 				}
 				ImGui::SetCursorPosY(cursorY - blockHight * 0.85);
 				draw::get_instance()->SliderFloatEx(title.c_str(), &value, (*ui)["min"].get<float>(), (*ui)["max"].get<float>(), format);
-				(*ui)["value"] = value;
+				if (data_type == globals::EDataType::NUMBER)
+				{
+					(*ui)["value"] = (int)value;
+				}
+				else if (data_type == globals::EDataType::FLOAT)
+				{
+					(*ui)["value"] = value;
+				}
+				
 			}
 			else if (ui_type == globals::EUIType::CHEKCBOX)
 			{
@@ -233,10 +365,25 @@ void Table_Setting(ImVec2 winsize)
 			else if (ui_type == globals::EUIType::INPUTEXT)
 			{
 				char buffer[256]{};
-				strcpy_s(buffer, (*ui)["value"].get<std::string>().c_str());
+				if (data_type == globals::EDataType::NUMBER)
+				{
+					_itoa_s((*ui)["value"].get<int>(), buffer,10);
+				}
+				else if (data_type == globals::EDataType::TEXT)
+				{
+					strcpy_s(buffer, (*ui)["value"].get<std::string>().c_str());
+				}
 				ImGui::SetCursorPosY(cursorY - blockHight * 0.75);
 				draw::get_instance()->InputTextEx(title.c_str(), buffer, sizeof(buffer));
-				(*ui)["value"] = buffer;
+				if (data_type == globals::EDataType::NUMBER)
+				{
+					(*ui)["value"] = atoi(buffer);
+				}
+				else if (data_type == globals::EDataType::TEXT)
+				{
+					(*ui)["value"] = buffer;
+				}
+				
 			}
 			ImGui::SetCursorPosY(cursorY);
 		}
@@ -249,6 +396,7 @@ void Table_Setting(ImVec2 winsize)
 		if (ImGui::Button(u8"\t\t\t\t\t确\t\t定\t\t\t\t\t"))
 		{
 			save_json("./data/config.json");
+			save_json_to_conf(globals::setting::options);
 		}
 		ImGui::EndChild();
 	}
@@ -266,14 +414,6 @@ void MainWidget::OnPaint()
 	static bool s_init = false;
 	if (!s_init)
 	{
-		g_rcon_cli.init_socket("111.67.201.70", 25575);
-		if (!g_rcon_cli.auth("PlaneJun_666"))
-		{
-			MessageBoxA(NULL, "rcon auth fail", NULL, NULL);
-			return;
-		}
-		g_console_logs += format_console_log("init rcon server done!");
-		CloseHandle(CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)RecvData_ThreadProc, &g_rcon_cli, NULL, NULL));
 		CloseHandle(CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)TimeCall_ThreadProc, NULL, NULL, NULL));
 		read_json("./data/config.json");
 		s_init = true;
