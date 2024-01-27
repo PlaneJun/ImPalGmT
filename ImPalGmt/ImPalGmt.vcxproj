@@ -42,13 +42,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -162,6 +162,7 @@
     <ClCompile Include="..\3part\imgui\imgui_theme.cpp" />
     <ClCompile Include="..\3part\imgui\imgui_widgets.cpp" />
     <ClCompile Include="ImPalGmt.cpp" />
+    <ClCompile Include="log\log.cpp" />
     <ClCompile Include="rcon\rcon.cpp" />
     <ClCompile Include="render\draw.cpp" />
     <ClCompile Include="render\render.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="..\3part\imgui\imstb_textedit.h" />
     <ClInclude Include="..\3part\imgui\imstb_truetype.h" />
     <ClInclude Include="globals.hpp" />
+    <ClInclude Include="log\log.h" />
     <ClInclude Include="rcon\rcon.h" />
     <ClInclude Include="render\draw.h" />
     <ClInclude Include="render\render.h" />

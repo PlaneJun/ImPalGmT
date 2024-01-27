@@ -28,6 +28,9 @@
     <Filter Include="utils">
       <UniqueIdentifier>{81d6fefa-b1bc-4085-9f78-bd0c26dfa846}</UniqueIdentifier>
     </Filter>
+    <Filter Include="log">
+      <UniqueIdentifier>{81ac80c4-cd7c-4c12-b7ac-47b8eb52fcbe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImPalGmt.cpp">
@@ -74,6 +77,9 @@
     </ClCompile>
     <ClCompile Include="utils\utils.cpp">
       <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="log\log.cpp">
+      <Filter>log</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -133,6 +139,9 @@
     </ClInclude>
     <ClInclude Include="globals.hpp">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="log\log.h">
+      <Filter>log</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

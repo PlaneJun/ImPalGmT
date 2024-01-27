@@ -1,5 +1,7 @@
 #pragma once
 #include <vector>
+#include <map>
+#include <variant>
 #include <string>
 #include <nlohmann/json.hpp>
 
@@ -50,6 +52,8 @@ namespace globals
 
 	namespace base
 	{
+		char game_server_root[MAX_PATH]{};
+
 		bool switch_autoBackup = false;
 		int mins_for_backup = 0;
 
@@ -60,7 +64,6 @@ namespace globals
 	namespace setting
 	{
 		nlohmann::ordered_json options;
-
 	}
 
 }

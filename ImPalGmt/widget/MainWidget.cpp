@@ -13,29 +13,39 @@
 #include "../render/draw.h"
 #include "../rcon/rcon.h"
 #include "../globals.hpp"
+#include "../log/log.h"
 
-
+#define WAIT_TIME_15_SEC 15
 #define WAIT_TIME_60_SEC 60
 
 rcon g_rcon_cli;
 HANDLE g_recv_tid;
 std::string g_console_logs{};
+std::string g_server_run_time{};
 
-
-
-void read_json(std::string path)
+// 读取本地游戏配置 & 游戏路径
+void read_local_config()
 {
-	std::ifstream conf_file(path);
+	// 读取游戏服务器配置模板
+	std::ifstream conf_file("./data/config.json");
 	conf_file >> globals::setting::options;
+	conf_file.close();
+
+	// 读取游戏路径
+	conf_file.open("./data/game.dat");
+	conf_file >> globals::base::game_server_root;
+	conf_file.close();
+
 }
 
-void save_json(std::string path)
+void save_server_to_json()
 {
-	std::ofstream conf_file(path);
+	std::ofstream conf_file("./data/config.json");
 	conf_file << globals::setting::options.dump();
+	conf_file.close();
 }
 
-bool save_json_to_conf(nlohmann::ordered_json datas)
+bool generate_server_from_json(nlohmann::ordered_json datas)
 {
 	std::string conf_buffer = "[/Script/Pal.PalGameWorldSettings]\nOptionSettings=(";
 	for (auto data : datas.items())
@@ -137,27 +147,40 @@ void TimeCall_ThreadProc()
 	while (true)
 	{
 		uint32_t wait = 0;
+		// 定时备份
 		if (globals::base::switch_autoBackup)
 		{
 			wait = globals::base::mins_for_backup * WAIT_TIME_60_SEC;
 			if (!(s_step % wait))
 			{
-				utils::copy_dir("./Pal/Backup/Backup_" + utils::get_local_time() , "./Pal/Saved");
-				printf("backup at %d min!\n", globals::base::mins_for_backup);
+				std::string bak_path = std::string(globals::base::game_server_root) + "\\Pal\\Backup\\Backup_"+utils::get_local_time();
+				std::string save_path = std::string(globals::base::game_server_root) + "\\Pal\\Saved";
+				utils::copy_dir(bak_path, save_path);
+				MSG_LOG("backup at %p !", bak_path.c_str());
 			}
 		}
 
+		// 定时重启
 		if (globals::base::switch_restart)
 		{
 			wait = globals::base::mins_for_restart * WAIT_TIME_60_SEC;
 			if (!(s_step % wait))
 			{
-				utils::copy_dir("./Pal/Backup/Backup_" + utils::get_local_time(), "./Pal/Saved");
+				std::string bak_path = std::string(globals::base::game_server_root) + "\\Pal\\Backup\\Backup_" + utils::get_local_time();
+				std::string save_path = std::string(globals::base::game_server_root) + "\\Pal\\Saved";
+				utils::copy_dir(bak_path, save_path);
 				utils::kill_process_by_name(L"PalServer.exe");
-				utils::create_process_by_filename("./PalServer.exe");
-				printf("restart at %d min!\n", globals::base::mins_for_restart);
+				utils::create_process_by_filename(std::string(globals::base::game_server_root).append("\\PalServer.exe").c_str());
+				MSG_LOG("restart at %s!", utils::get_local_time().c_str());
 			}
 		}
+
+		// 更新服务器运行时间
+		if (!(s_step % WAIT_TIME_15_SEC))
+		{
+			g_server_run_time = utils::get_process_runtime_by_pid(utils::get_pid_by_name(L"PalServer.exe"));
+		}
+
 		Sleep(1000);
 		s_step++;
 	}
@@ -222,29 +245,42 @@ void Table_Base()
 		
 	}
 	ImGui::Separator();
-	if (ImGui::BeginChild("#server_status", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, ImGuiWindowFlags_NoBackground))
+	if (ImGui::BeginChild("#server_function", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y*0.85), false, ImGuiWindowFlags_NoBackground))
 	{
 		ImGui::Checkbox(u8"自动备份", &globals::base::switch_autoBackup);
 		ImGui::SameLine();
 		ImGui::Checkbox(u8"定时重启", &globals::base::switch_restart);
 		ImGui::EndChild();
 	}
+	ImGui::Separator();
+	if (ImGui::BeginChild("#server_status", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, ImGuiWindowFlags_NoBackground))
+	{
+		ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x / 2.3);
+		ImGui::Text((u8"服务器存在时间："+g_server_run_time).c_str());
+		ImGui::EndChild();
+	}
 	if (ImGui::BeginPopupModal("connect to remote rcon", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::Text(u8"输入ip:port");
+		ImGui::Text(u8"连接信息:");
 		ImGui::Separator();
-		static char buf[100]{};
-		ImGui::InputText("##ip_rcon", buf, 100);
+		static char ip_port_buf[100]="127.0.0.1:25575";
+		static char pwd_buf[100]{};
+		ImGui::Text(u8"IP/端口:");
+		ImGui::SameLine();
+		ImGui::InputTextWithHint("##ip_rcon", ip_port_buf, ip_port_buf, sizeof(ip_port_buf));
+		ImGui::Text(u8"密	 码:");
+		ImGui::SameLine();
+		ImGui::InputText("##rcon_pwd", pwd_buf, sizeof(pwd_buf));
 		if (ImGui::Button(u8"确认", ImVec2(120, 0)))
 		{
-			std::string tmp(buf);
+			std::string tmp(ip_port_buf);
 			int index = tmp.find(":");
 			if (index != std::string::npos)
 			{
 				std::string ip = tmp.substr(0, index);
 				int port = atoi(tmp.substr(index+1).c_str());
 				g_rcon_cli.init_socket(ip.c_str(), port);
-				if (!g_rcon_cli.auth("PlaneJun_666"))
+				if (!g_rcon_cli.auth(pwd_buf))
 				{
 					MessageBoxA(NULL, "rcon auth fail", NULL, NULL);
 				}
@@ -259,8 +295,7 @@ void Table_Base()
 			{
 				MessageBoxA(NULL, "invaild input", NULL, NULL);
 			}
-			
-			
+
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
@@ -395,18 +430,43 @@ void Table_Setting(ImVec2 winsize)
 		ImGui::SetCursorPos({ winsize.x / 2 - 95,10 });
 		if (ImGui::Button(u8"\t\t\t\t\t确\t\t定\t\t\t\t\t"))
 		{
-			save_json("./data/config.json");
-			save_json_to_conf(globals::setting::options);
+			// 保存到本地json
+			save_server_to_json();
+			// 生成配置
+			generate_server_from_json(globals::setting::options);
+			// 打开生成的文件
+			system("cmd.exe /c notepad PalWorldSettings.ini");
 		}
 		ImGui::EndChild();
 	}
-
 }
 
 void Table_Option()
 {
-	ImGui::InputInt(u8"自动备份时间间隔",&globals::base::mins_for_backup);
-	ImGui::InputInt(u8"自动重启时间间隔", &globals::base::mins_for_restart);
+	ImGui::SeparatorText(u8"程序设置");
+	ImGui::Text(u8"自动备份时间间隔（分钟）:");
+	ImGui::SameLine();
+	ImGui::InputInt("##auto_bakup_time", &globals::base::mins_for_backup);
+	ImGui::Text(u8"自动重启时间间隔（分钟）:");
+	ImGui::SameLine();
+	ImGui::InputInt("##auto_restart_time", &globals::base::mins_for_restart);
+	ImGui::Text(u8"游戏服务器根路径:");
+	ImGui::SameLine();
+	ImGui::InputText(u8"##set_game_path", globals::base::game_server_root,sizeof(globals::base::game_server_root));
+	ImGui::SameLine();
+	if (ImGui::Button(u8"设置/更新 游戏路径"))
+	{
+		if (std::filesystem::exists(std::string(globals::base::game_server_root).append("\\PalServer.exe")))
+		{
+			std::ofstream game_path("./data/game.dat");
+			game_path << globals::base::game_server_root;
+			game_path.close();
+			MessageBoxA(NULL, "更新路径成功", "ok", NULL);
+		}
+		else {
+			MessageBoxA(NULL, "选择路径错误,请选择类似下列路径:\nE:\\Game\\steamcmd\\steamapps\\common\\PalServer", "Error", NULL);
+		}
+	}
 }
 
 void MainWidget::OnPaint()
@@ -415,24 +475,54 @@ void MainWidget::OnPaint()
 	if (!s_init)
 	{
 		CloseHandle(CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)TimeCall_ThreadProc, NULL, NULL, NULL));
-		read_json("./data/config.json");
+		read_local_config();
 		s_init = true;
 	}
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowPadding = { 2.f,2.f };
-
-	//static ImGuiTheme::ImGuiTweakedTheme theme;
-	//ImGuiTheme::ShowThemeTweakGui(&theme);
-	//ImGuiTheme::ApplyTweakedTheme(theme);
+	{
+		//static ImGuiTheme::ImGuiTweakedTheme theme;
+		//ImGuiTheme::ShowThemeTweakGui(&theme);
+		//ImGuiTheme::ApplyTweakedTheme(theme);
+	}
 
     if (ImGui::Begin("main", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus))
     {
         ImGui::SetWindowPos("main", { 0,0 });
         ImGui::SetWindowSize("main", size_);
-        
         ImGuiTheme::ApplyTheme(ImGuiTheme::ImGuiTheme_MaterialFlat);
 
+		// 检查路径是否设置
+		if (strlen(globals::base::game_server_root) <= 0 || !std::filesystem::exists(std::string(globals::base::game_server_root) + "\\PalServer.exe"))
+		{
+			ImGui::OpenPopup(u8"选择游戏服务器路径");
+			ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+			ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		}
+		if (ImGui::BeginPopupModal(u8"选择游戏服务器路径", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text(u8"输入游戏路径");
+			ImGui::Separator();
+			static char buf[100]{};
+			ImGui::InputText("##GamePath", globals::base::game_server_root, 100);
+			if (ImGui::Button(u8"确认"))
+			{
+				if (std::filesystem::exists(std::string(globals::base::game_server_root).append("\\PalServer.exe")))
+				{
+					std::ofstream game_path("./data/game.dat");
+					game_path << globals::base::game_server_root;
+					game_path.close();
+					ImGui::CloseCurrentPopup();
+				}
+				else {
+					MessageBoxA(NULL, "选择路径错误,请选择类似下列路径:\nE:\\Game\\steamcmd\\steamapps\\common\\PalServer", "Error", NULL);
+				}
+			}
+			ImGui::EndPopup();
+		}
+		
+		// 绘制主页面
 		if (ImGui::BeginTabBar("main_tabs_page", ImGuiTabBarFlags_None))
 		{
 			if (ImGui::BeginTabItem(u8"基本"))
@@ -440,9 +530,14 @@ void MainWidget::OnPaint()
 				Table_Base();
 				ImGui::EndTabItem();
 			}
-			if (ImGui::BeginTabItem(u8"配置"))
+			if (ImGui::BeginTabItem(u8"服务器配置"))
 			{
 				Table_Setting(GetWindowSize());
+				ImGui::EndTabItem();
+			}
+			if (ImGui::BeginTabItem(u8"存档管理"))
+			{
+				
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem(u8"设置"))
@@ -452,6 +547,7 @@ void MainWidget::OnPaint()
 			}
 			ImGui::EndTabBar();
 		}
+		
         ImGui::End();
     }
 }

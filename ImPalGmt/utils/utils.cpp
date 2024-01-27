@@ -188,4 +188,47 @@ namespace  utils
 		strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", &timeinfo);
 		return buffer;
 	}
+
+	std::string get_process_runtime_by_pid(uint32_t pid)
+	{
+		HANDLE process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+
+		if (process != NULL) {
+			FILETIME ftCreation, ftExit, ftKernel, ftUser;
+			SYSTEMTIME stCreation, lstCreation, currentTime;
+
+			if (GetProcessTimes(process, &ftCreation, &ftExit, &ftKernel, &ftUser)) {
+				FileTimeToSystemTime(&ftCreation, &stCreation);
+				SystemTimeToTzSpecificLocalTime(NULL, &stCreation, &lstCreation);
+
+				GetSystemTime(&currentTime);
+
+				FILETIME ftCurrentTime;
+				SystemTimeToFileTime(&currentTime, &ftCurrentTime);
+
+				ULARGE_INTEGER startTime, currentTimeValue;
+				startTime.LowPart = ftCreation.dwLowDateTime;
+				startTime.HighPart = ftCreation.dwHighDateTime;
+
+				currentTimeValue.LowPart = ftCurrentTime.dwLowDateTime;
+				currentTimeValue.HighPart = ftCurrentTime.dwHighDateTime;
+
+				ULONGLONG elapsedTime = currentTimeValue.QuadPart - startTime.QuadPart;
+				elapsedTime /= 10000; // Convert to milliseconds
+
+				// Calculate hours, minutes, and seconds
+				int hours = static_cast<int>(elapsedTime / 3600000);
+				int minutes = static_cast<int>((elapsedTime % 3600000) / 60000);
+				int seconds = static_cast<int>((elapsedTime % 60000) / 1000);
+
+				CloseHandle(process);
+
+				return std::to_string(hours) + " h " + std::to_string(minutes) + " min " + std::to_string(seconds) + " sec ";
+			}
+			else {
+				CloseHandle(process);
+			}
+		}
+		return "no running";
+	}
 }

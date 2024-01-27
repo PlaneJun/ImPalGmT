@@ -32,4 +32,6 @@ namespace  utils
 	void copy_dir(std::string dest, std::string source);
 
 	std::string get_local_time();
+
+	std::string get_process_runtime_by_pid(uint32_t pid);
 }
