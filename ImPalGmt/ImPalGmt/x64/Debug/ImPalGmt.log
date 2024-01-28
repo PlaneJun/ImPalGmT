@@ -1,4 +1,0 @@
-﻿  MainWidget.cpp
-C:\Users\SuperRong\Desktop\ImPalGmt\ImPalGmt\widget\MainWidget.cpp(131,120): warning C4244: “参数”: 从“float”转换到“int”，可能丢失数据
-C:\Users\SuperRong\Desktop\ImPalGmt\ImPalGmt\widget\MainWidget.cpp(131,106): warning C4244: “参数”: 从“float”转换到“int”，可能丢失数据
-  ImPalGmt.vcxproj -> C:\Users\SuperRong\Desktop\ImPalGmt\x64\Debug\ImPalGmt.exe
