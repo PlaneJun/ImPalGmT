@@ -2,6 +2,7 @@
 #include <filesystem>
 #include "utils.h"
 #include <windows.h>
+#include <psapi.h>
 #include <TlHelp32.h> 
 
 
@@ -230,5 +231,55 @@ namespace  utils
 			}
 		}
 		return "no running";
+	}
+
+	double get_cpu_usege(uint32_t pid)
+	{
+		HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+		if (hProcess == NULL) {
+			return 0;
+		}
+
+		FILETIME creationTime, exitTime, kernelTime, userTime;
+		if (!GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime)) {
+			CloseHandle(hProcess);
+			return 0;
+		}
+		CloseHandle(hProcess);
+
+		ULARGE_INTEGER cpuUsage;
+		cpuUsage.QuadPart = ((ULONGLONG)(kernelTime.dwHighDateTime) << 32) + kernelTime.dwLowDateTime +
+			((ULONGLONG)(userTime.dwHighDateTime) << 32) + userTime.dwLowDateTime;
+
+		double cpuPercentage = static_cast<double>(cpuUsage.QuadPart * 100 / (static_cast<DWORD64>(GetTickCount()) * 10000));
+		return cpuPercentage;
+	}
+
+	SIZE_T get_mem_usege(uint32_t pid, DWORDLONG* totalMem)
+	{
+		HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+		if (hProcess == NULL) {
+			return 0;
+		}
+
+		MEMORYSTATUSEX memoryStatus;
+		memoryStatus.dwLength = sizeof(memoryStatus);
+		if (!GlobalMemoryStatusEx(&memoryStatus)) {
+			CloseHandle(hProcess);
+			return 0;
+		}
+		*totalMem = memoryStatus.ullTotalPhys;
+		
+		PROCESS_MEMORY_COUNTERS pmc;
+		ZeroMemory(&pmc, sizeof(pmc));
+		pmc.cb = sizeof(pmc);
+		if (!GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc))) {
+			CloseHandle(hProcess);
+			return 0;
+		}
+		CloseHandle(hProcess);
+
+		
+		return pmc.WorkingSetSize;
 	}
 }

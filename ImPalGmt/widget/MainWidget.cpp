@@ -22,6 +22,9 @@ rcon g_rcon_cli;
 HANDLE g_recv_tid;
 std::string g_console_logs{};
 std::string g_server_run_time{};
+double g_server_cpu_usege{};
+std::pair<SIZE_T, DWORDLONG> g_server_memory_usege={1,1};
+
 
 // 读取本地游戏配置 & 游戏路径
 void read_local_config()
@@ -178,7 +181,13 @@ void TimeCall_ThreadProc()
 		// 更新服务器运行时间
 		if (!(s_step % WAIT_TIME_15_SEC))
 		{
-			g_server_run_time = utils::get_process_runtime_by_pid(utils::get_pid_by_name(L"PalServer.exe"));
+			g_server_run_time = utils::get_process_runtime_by_pid(utils::get_pid_by_name(L"PalServer-Win64-Test-Cmd.exe"));
+			g_server_cpu_usege = utils::get_cpu_usege(utils::get_pid_by_name(L"PalServer-Win64-Test-Cmd.exe"));
+
+			DWORDLONG total_mem{};
+			SIZE_T usege_mem= utils::get_mem_usege(utils::get_pid_by_name(L"PalServer-Win64-Test-Cmd.exe"),&total_mem);
+			g_server_memory_usege.first = usege_mem;
+			g_server_memory_usege.second = total_mem;
 		}
 
 		Sleep(1000);
@@ -245,19 +254,28 @@ void Table_Base()
 		
 	}
 	ImGui::Separator();
-	if (ImGui::BeginChild("#server_function", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y*0.85), false, ImGuiWindowFlags_NoBackground))
+	
+	if (ImGui::BeginChild("#server_function", ImVec2(ImGui::GetContentRegionAvail().x * 0.7, ImGui::GetContentRegionAvail().y), false))
 	{
 		ImGui::Checkbox(u8"自动备份", &globals::base::switch_autoBackup);
 		ImGui::SameLine();
 		ImGui::Checkbox(u8"定时重启", &globals::base::switch_restart);
 		ImGui::EndChild();
 	}
-	ImGui::Separator();
-	if (ImGui::BeginChild("#server_status", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, ImGuiWindowFlags_NoBackground))
+	ImGui::SameLine();
+	if (ImGui::BeginChild("#server_info", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, ImGuiWindowFlags_NoBackground))
 	{
-		ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x / 2.3);
-		ImGui::Text((u8"服务器存在时间："+g_server_run_time).c_str());
+		ImGui::Text((u8"服务器时间：" + g_server_run_time).c_str());
+		ImGui::Text(u8"内存： ");
+		ImGui::SameLine();
+		std::string meminfo = std::to_string(g_server_memory_usege.first / 1024 / 1024) + "M / " + std::to_string(g_server_memory_usege.second / 1024 / 1024) + "M";
+		draw::get_instance()->ProgressBarEx(meminfo.c_str(), g_server_memory_usege.first * 1.f, g_server_memory_usege.second * 1.f, { ImGui::GetContentRegionAvail().x * 0.9f,0 });
+		ImGui::Text(u8"CPU： ");
+		ImGui::SameLine();
+		std::string cpuinfo = std::to_string((int)g_server_cpu_usege) + "%";
+		draw::get_instance()->ProgressBarEx(cpuinfo.c_str(), g_server_cpu_usege, 100, { ImGui::GetContentRegionAvail().x * 0.9f,0 });
 		ImGui::EndChild();
+
 	}
 	if (ImGui::BeginPopupModal("connect to remote rcon", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{

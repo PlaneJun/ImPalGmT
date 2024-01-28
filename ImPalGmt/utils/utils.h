@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <stdint.h>
-
+#include <windows.h>
 
 namespace  utils
 {
@@ -34,4 +34,8 @@ namespace  utils
 	std::string get_local_time();
 
 	std::string get_process_runtime_by_pid(uint32_t pid);
+
+	double get_cpu_usege(uint32_t pid);
+
+	SIZE_T get_mem_usege(uint32_t pid, DWORDLONG* totalMem);
 }

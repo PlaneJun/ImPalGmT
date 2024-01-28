@@ -25,6 +25,8 @@ public:
 
 	bool InputTextEx(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags=0, ImGuiInputTextCallback callback=0, void* user_data=0);
 	bool InputTextExEx(const char* label, const char* hint, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = 0, void* callback_user_data = 0);
+
+	void ProgressBarEx(const char* label,float curt,float max, const ImVec2& size_arg=ImVec2(-FLT_MIN, 0));
 private:
 	static draw* s_instance_;
 };

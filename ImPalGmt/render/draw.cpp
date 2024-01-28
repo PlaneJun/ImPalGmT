@@ -1752,6 +1752,38 @@ bool draw::InputTextExEx(const char* label, const char* hint, char* buf, int buf
 		return value_changed;
 }
 
+void draw::ProgressBarEx(const char* label, float curt, float max, const ImVec2& size_arg)
+{
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	if (window->SkipItems)
+		return;
+
+	ImGuiContext& g = *GImGui;
+	const ImGuiStyle& style = g.Style;
+	const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+	ImVec2 pos = window->DC.CursorPos;
+	ImVec2 size = ImGui::CalcItemSize(size_arg, ImGui::CalcItemWidth(), g.FontSize + style.FramePadding.y * 2.0f);
+	ImRect bb(pos, { pos.x + size.x ,pos.y + size .y});
+	ImGui::ItemSize(size, style.FramePadding.y);
+	if (!ImGui::ItemAdd(bb, 0))
+		return;
+
+	// Render
+	//fraction = ImGui::ImSaturate(fraction);
+	//ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+	bb.Expand(ImVec2(-style.FrameBorderSize, -style.FrameBorderSize));
+	//const ImVec2 fill_br = ImVec2(ImLerp(bb.Min.x, bb.Max.x, fraction), bb.Max.y);
+	//ImGui::RenderRectFilledRangeH(window->DrawList, bb, ImGui::GetColorU32(ImGuiCol_PlotHistogram), 0.0f, fraction, style.FrameRounding);
+	window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(211, 211, 211, 50));
+
+	float w = (curt / max)*( bb.Max.x - bb.Min.x);
+	window->DrawList->AddRectFilled(bb.Min, { bb.Min.x +w,bb.Max.y}, IM_COL32(0, 255, 0, 50));
+	
+
+	if (label_size.x > 0.0f)
+		ImGui::RenderText({ bb.Min.x+w+5,bb.Max.y- label_size.y-5 }, label);
+}
+
 
 
 
